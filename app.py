@@ -1,138 +1,196 @@
 import streamlit as st
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+import streamlit.components.v1 as components
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(
-    page_title="İnteraktif Kesir Duvarı",
-    layout="centered"
-)
+st.set_page_config(page_title="İnteraktif Kesir Duvarı", layout="wide")
 
-# --- SESSION STATE (DURUM YÖNETİMİ) ---
-# Kullanıcının eklediği parça sayısını hafızada tutuyoruz.
-if 'count' not in st.session_state:
-    st.session_state.count = 0
-if 'denominator' not in st.session_state:
-    st.session_state.denominator = 3  # Varsayılan 1/3
+st.title("🧩 Kesir Duvarı: Sürükle ve Bırak")
+st.markdown("""
+Aşağıdaki renkli kesir bloklarını **mouse ile tutup** en üstteki **"HEDEF: 1 TAM"** kutusunun içine sürükleyin.
+Parçaların bütünü nasıl oluşturduğunu gözlemleyin. (Örn: 3 tane 1/3'ü yan yana dizin)
+""")
 
-# --- FONKSİYONLAR ---
-
-def reset_game():
-    """Oyunu sıfırlar."""
-    st.session_state.count = 0
-
-def add_piece():
-    """Bir parça ekler."""
-    st.session_state.count += 1
-
-def remove_piece():
-    """Bir parça çıkarır."""
-    if st.session_state.count > 0:
-        st.session_state.count -= 1
-
-def draw_interactive_wall(numerator, denominator):
-    """
-    Matplotlib ile dinamik çizim yapar.
-    Üstte: Doldurulacak '1 Tam' kutusu (Outline).
-    İçinde: Eklenen parçalar.
-    """
-    fig, ax = plt.subplots(figsize=(10, 4))
+# --- HTML/CSS/JS KODU (GÖMÜLÜ ARAYÜZ) ---
+# Bu blok, Streamlit'in yapamadığı "Sürükle-Bırak" işlemini tarayıcıda yapar.
+html_code = """
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    body { font-family: sans-serif; user-select: none; }
     
-    # Koordinat sistemi ayarları
-    ax.set_xlim(0, 1.2)
-    ax.set_ylim(0, 1.5)
-    ax.axis('off') # Eksenleri gizle
-
-    # --- 1. HEDEF KUTUSU (1 TAM) ---
-    # Bu kutu şeffaf ve kenarlıklı olacak, dolmayı bekleyen kap gibi.
-    rect_whole = patches.Rectangle(
-        (0.1, 0.5), 1.0, 0.6, 
-        linewidth=3, edgecolor='#2c3e50', facecolor='none', linestyle='--'
-    )
-    ax.add_patch(rect_whole)
-    ax.text(0.6, 1.2, "1 TAM (Bütün)", ha='center', fontsize=14, fontweight='bold', color='#2c3e50')
-
-    # --- 2. PARÇALARI ÇİZME (ANIMASYON HİSSİ) ---
-    # Kullanıcının eklediği sayı kadar parça çizeriz.
-    colors = {2: '#e056fd', 3: '#9b59b6', 4: '#3498db', 5: '#1abc9c', 6: '#2ecc71'}
-    piece_color = colors.get(denominator, '#95a5a6')
+    /* HEDEF ALAN (DROP ZONE) */
+    .drop-zone {
+        width: 100%;
+        max-width: 800px;
+        height: 80px;
+        border: 3px dashed #333;
+        background-color: #f0f2f6;
+        margin: 20px auto;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 5px;
+        box-sizing: border-box;
+        border-radius: 10px;
+        position: relative;
+    }
     
-    width = 1.0 / denominator
+    .drop-zone::before {
+        content: "HEDEF ALAN (Buraya Bırak)";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #aaa;
+        font-weight: bold;
+        z-index: 0;
+    }
+
+    /* KESİR DUVARI (KAYNAK) */
+    .fraction-wall {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        gap: 5px;
+    }
+
+    .row {
+        display: flex;
+        width: 100%;
+        height: 60px;
+        gap: 2px;
+    }
+
+    /* GENEL KUTU STİLİ */
+    .block {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: black;
+        border: 1px solid rgba(0,0,0,0.2);
+        cursor: grab;
+        border-radius: 4px;
+        font-size: 1.2rem;
+        z-index: 1; /* Yazının üstte kalması için */
+        transition: transform 0.1s;
+    }
+
+    .block:active {
+        cursor: grabbing;
+        transform: scale(0.98);
+    }
+
+    /* GÖRSELDEKİ RENKLER */
+    .full { background-color: #ff9ff3; width: 100%; }       /* 1 Tam - Pembe */
+    .half { background-color: #c8a2c8; width: 50%; }         /* 1/2 - Lila */
+    .third { background-color: #a29bfe; width: 33.33%; }     /* 1/3 - Morumsu */
+    .quarter { background-color: #74b9ff; width: 25%; }      /* 1/4 - Mavi */
+    .fifth { background-color: #81ecec; width: 20%; }        /* 1/5 - Turkuaz */
+    .sixth { background-color: #55efc4; width: 16.66%; }     /* 1/6 - Yeşil */
+
+    /* SİLME BUTONU */
+    .reset-btn {
+        display: block;
+        margin: 10px auto;
+        padding: 10px 20px;
+        background-color: #ff7675;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+    .reset-btn:hover { background-color: #d63031; }
+
+</style>
+</head>
+<body>
+
+    <div id="target" class="drop-zone" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
     
-    for i in range(numerator):
-        # Eğer parça sayısı paydayı geçerse (Bileşik kesir), kutudan taşar.
-        # Görsel olarak 1 tam kutusunun (x=0.1) içine yerleştiriyoruz.
-        x_pos = 0.1 + (i * width)
+    <button class="reset-btn" onclick="resetTarget()">Alanı Temizle</button>
+
+    <div class="fraction-wall">
+        <div class="row">
+            <div class="block half" draggable="true" ondragstart="drag(event)" data-val="1/2">1/2</div>
+            <div class="block half" draggable="true" ondragstart="drag(event)" data-val="1/2">1/2</div>
+        </div>
+        <div class="row">
+            <div class="block third" draggable="true" ondragstart="drag(event)" data-val="1/3">1/3</div>
+            <div class="block third" draggable="true" ondragstart="drag(event)" data-val="1/3">1/3</div>
+            <div class="block third" draggable="true" ondragstart="drag(event)" data-val="1/3">1/3</div>
+        </div>
+        <div class="row">
+            <div class="block quarter" draggable="true" ondragstart="drag(event)" data-val="1/4">1/4</div>
+            <div class="block quarter" draggable="true" ondragstart="drag(event)" data-val="1/4">1/4</div>
+            <div class="block quarter" draggable="true" ondragstart="drag(event)" data-val="1/4">1/4</div>
+            <div class="block quarter" draggable="true" ondragstart="drag(event)" data-val="1/4">1/4</div>
+        </div>
+        <div class="row">
+            <div class="block fifth" draggable="true" ondragstart="drag(event)" data-val="1/5">1/5</div>
+            <div class="block fifth" draggable="true" ondragstart="drag(event)" data-val="1/5">1/5</div>
+            <div class="block fifth" draggable="true" ondragstart="drag(event)" data-val="1/5">1/5</div>
+            <div class="block fifth" draggable="true" ondragstart="drag(event)" data-val="1/5">1/5</div>
+            <div class="block fifth" draggable="true" ondragstart="drag(event)" data-val="1/5">1/5</div>
+        </div>
+        <div class="row">
+            <div class="block sixth" draggable="true" ondragstart="drag(event)" data-val="1/6">1/6</div>
+            <div class="block sixth" draggable="true" ondragstart="drag(event)" data-val="1/6">1/6</div>
+            <div class="block sixth" draggable="true" ondragstart="drag(event)" data-val="1/6">1/6</div>
+            <div class="block sixth" draggable="true" ondragstart="drag(event)" data-val="1/6">1/6</div>
+            <div class="block sixth" draggable="true" ondragstart="drag(event)" data-val="1/6">1/6</div>
+            <div class="block sixth" draggable="true" ondragstart="drag(event)" data-val="1/6">1/6</div>
+        </div>
+    </div>
+
+<script>
+    function allowDrop(ev) {
+        ev.preventDefault();
+    }
+
+    function drag(ev) {
+        // Sürüklenen elementin özelliklerini kopyalamak için veri setini alıyoruz
+        // Orijinal elementi taşımıyoruz, kopyasını oluşturacağız (cloning)
+        ev.dataTransfer.setData("text", ev.target.className); 
+        ev.dataTransfer.setData("content", ev.target.innerText);
+    }
+
+    function drop(ev) {
+        ev.preventDefault();
         
-        rect_part = patches.Rectangle(
-            (x_pos, 0.5), width, 0.6,
-            linewidth=1, edgecolor='white', facecolor=piece_color
-        )
-        ax.add_patch(rect_part)
+        // Sadece target alanına bırakmaya izin ver
+        if (ev.target.id !== "target" && ev.target.parentNode.id !== "target") return;
+
+        var className = ev.dataTransfer.getData("text");
+        var content = ev.dataTransfer.getData("content");
         
-        # Parçanın içine yazıyı ortala
-        ax.text(x_pos + width/2, 0.8, f"1/{denominator}", 
-                ha='center', va='center', color='white', fontsize=12, fontweight='bold')
-
-    return fig
-
-# --- ARAYÜZ (UI) ---
-def main():
-    st.title("🧩 Kesirleri Birleştirme Oyunu")
-    st.markdown("Aşağıdaki butonları kullanarak **Birim Kesirleri (1/n)** yukarıdaki **1 TAM** kutusuna taşıyın.")
-
-    # 1. Ayarlar (Sidebar yerine yukarı alalım, daha kolay görünsün)
-    col_set1, col_set2 = st.columns([1, 3])
-    with col_set1:
-        new_denom = st.selectbox(
-            "Kesir Takımı Seç:", 
-            options=[2, 3, 4, 5, 6], 
-            index=1, # Varsayılan 3 (1/3)
-            format_func=lambda x: f"1/{x}'lik Parçalar"
-        )
+        // Yeni bir element oluştur (Kopyalama mantığı)
+        var node = document.createElement("div");
+        node.className = className;
+        node.innerText = content;
         
-        # Eğer payda değişirse sayacı sıfırla
-        if new_denom != st.session_state.denominator:
-            st.session_state.denominator = new_denom
-            st.session_state.count = 0
-            st.rerun()
+        // Kopyanın draggable özelliğini kaldırıyoruz (tekrar sürüklenmesin)
+        node.draggable = false;
+        node.style.cursor = "default";
+        
+        // Hedef alana ekle
+        document.getElementById("target").appendChild(node);
+    }
 
-    # 2. Görsel Alanı
-    fig = draw_interactive_wall(st.session_state.count, st.session_state.denominator)
-    st.pyplot(fig)
+    function resetTarget() {
+        document.getElementById("target").innerHTML = "";
+    }
+</script>
 
-    # 3. Kontrol Butonları (Oyunun Kalbi)
-    col1, col2, col3 = st.columns([1, 1, 1])
-    
-    with col1:
-        if st.button(f"➕ 1/{st.session_state.denominator} Ekle", type="primary"):
-            add_piece()
-            st.rerun()
+</body>
+</html>
+"""
 
-    with col2:
-        if st.button("➖ Çıkar"):
-            remove_piece()
-            st.rerun()
-            
-    with col3:
-        if st.button("🔄 Sıfırla"):
-            reset_game()
-            st.rerun()
+# HTML Kodunu Streamlit içinde çalıştır
+components.html(html_code, height=600, scrolling=False)
 
-    # 4. Geri Bildirim Mesajları
-    current_val = st.session_state.count
-    denom = st.session_state.denominator
-    
-    st.markdown("---")
-    if current_val == 0:
-        st.info("👆 Başlamak için **Ekle** butonuna basın.")
-    elif current_val < denom:
-        st.warning(f"Şu an elimizde **{current_val} tane 1/{denom}** var. 1 Tam olması için **{denom - current_val}** tane daha lazım.")
-    elif current_val == denom:
-        st.balloons()
-        st.success(f"🎉 TEBRİKLER! **{denom} tane 1/{denom}** birleşerek **1 TAM** oluşturdu!")
-    else:
-        st.error(f"Dikkat! 1 Tam'ı geçtin. Şu an elinde **{current_val}/{denom}** (Bileşik Kesir) var.")
-
-if __name__ == "__main__":
-    main()
+st.info("💡 **İpucu:** Örneğin 2 tane 1/4 bloğu ile 1 tane 1/2 bloğunun aynı boyutta olduğunu görmek için yan yana koymayı dene!")
