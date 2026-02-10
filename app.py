@@ -2,7 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Sayı Doğrusu Modeli", layout="wide")
+st.set_page_config(page_title="Sayı Doğrusu: Bileşik Kesirler", layout="wide")
 
 # --- CSS STİLLERİ ---
 st.markdown("""
@@ -10,24 +10,31 @@ st.markdown("""
     .stApp { background-color: #f8f9fa; }
     .sidebar .sidebar-content { background-color: #eec9d2; }
     h1, h2, h3 { color: #2c3e50; font-family: 'Segoe UI', sans-serif; }
+    .hint-text { background-color: #fff3cd; padding: 10px; border-left: 5px solid #ffc107; border-radius: 5px; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- SIDEBAR (SOL PANEL) ---
 with st.sidebar:
     st.header("⚙️ Ayarlar")
-    st.write("Çalışmak istediğiniz birim kesri seçin:")
+    st.write("Birim kesri seçin:")
     
     selected_option = st.radio(
-        "Birim Kesir:",
+        "Parça Boyutu:",
         options=["1/2", "1/3", "1/4", "1/5", "1/6"],
-        index=1 
+        index=2 # Varsayılan 1/4
     )
     
     denom = int(selected_option.split("/")[1])
     
     st.markdown("---")
-    st.info(f"💡 **Hedef:** {denom} tane **{selected_option}** parçasını birleştirerek **1 Tam** elde etmeye çalışın.")
+    st.markdown("""
+    <div class="hint-text">
+    💡 **Yeni Hedef:** <br>
+    Parçaları birleştirerek önce <b>1 Tam</b>'a ulaşın.<br>
+    Sonra parça eklemeye devam ederek <b>1'i geçin</b> (Örn: 1 tam 1/4).
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("---")
     
     if st.button("🔄 Ekranı Temizle"):
@@ -37,8 +44,8 @@ with st.sidebar:
 col1, col2 = st.columns([1, 10]) 
 
 with col2:
-    st.title(f"📏 Sayı Doğrusunda {selected_option}'leri Göster")
-    st.markdown("Parçaları sürükleyin. **1 Tam**'a ulaştığınızda, sayı doğrusunun altında bütünün kendisini göreceksiniz.")
+    st.title(f"📏 Sayı Doğrusunda İlerleme ({selected_option})")
+    st.write("Aşağıdaki parçaları sürükleyip sayı doğrusunun üzerine bırakın. 1'e ulaştığınızda durmayın, devam edin!")
 
     # --- HTML/CSS/JS KODU ---
     html_code = f"""
@@ -51,6 +58,8 @@ with col2:
             --line-color: #0984e3;
             --bg-color: #ffffff;
             --text-color: #2d3436;
+            --whole-color: #ff9ff3;
+            --whole-border: #fd79a8;
         }}
 
         body {{ 
@@ -69,7 +78,7 @@ with col2:
             position: relative;
             width: 100%;
             max-width: 850px;
-            height: 220px; /* Yüksekliği artırdım ki alttaki blok sığsın */
+            height: 220px;
             margin-top: 20px;
             background: white;
             border-radius: 15px;
@@ -104,106 +113,46 @@ with col2:
         .ticks-layer {{
             position: absolute;
             width: calc(100% - 40px); /* Padding payı */
-            left: 20px;
-            top: 80px; 
-            height: 40px;
-            pointer-events: none;
-            z-index: 5;
+            left: 20px; top: 80px; height: 40px; pointer-events: none; z-index: 5;
         }}
-
-        .tick-mark {{
-            position: absolute;
-            background-color: var(--line-color);
-            transform: translateX(-50%);
-        }}
+        .tick-mark {{ position: absolute; background-color: var(--line-color); transform: translateX(-50%); }}
         .tick-main {{ height: 20px; width: 4px; top: 0; }}
         .tick-sub {{ height: 10px; width: 2px; top: 0; opacity: 0.6; }}
+        .tick-label {{ position: absolute; top: 25px; transform: translateX(-50%); font-size: 18px; font-weight: bold; color: var(--text-color); }}
 
-        .tick-label {{
-            position: absolute;
-            top: 25px;
-            transform: translateX(-50%);
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--text-color);
-        }}
-
-        /* --- YENİ: BÜTÜN KATMANI (Sayı doğrusunun ALTI) --- */
+        /* --- BÜTÜN KATMANI (Sayı doğrusunun ALTI) --- */
         .wholes-layer {{
-            position: absolute;
-            width: calc(100% - 40px);
-            left: 20px;
-            top: 140px; /* Çentiklerin ve rakamların altı */
-            height: 50px;
-            display: flex;
-            pointer-events: none;
+            position: absolute; width: calc(100% - 40px); left: 20px; top: 140px; height: 50px; display: flex; pointer-events: none;
         }}
-
         .whole-indicator {{
-            position: absolute;
-            height: 100%;
-            width: 50%; /* 0-1 arası (Toplam 2 birim olduğu için yarısı) */
-            background-color: #ff9ff3; /* Pembe 1 Tam Rengi */
-            border: 2px solid #fd79a8;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: #2d3436;
-            opacity: 0; /* Başlangıçta görünmez */
-            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Havalı geçiş */
-            transform: translateY(-10px);
+            position: absolute; height: 100%; width: 50%; /* 0-1 ve 1-2 arası */
+            background-color: var(--whole-color); border: 2px solid var(--whole-border);
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: bold; color: #2d3436;
+            opacity: 0; transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(-10px);
         }}
-
-        .whole-indicator.visible {{
-            opacity: 1;
-            transform: translateY(0);
-        }}
+        .whole-indicator.visible {{ opacity: 1; transform: translateY(0); }}
 
         /* BLOKLAR ALANI */
         .fraction-pool {{
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-top: 30px;
-            width: 100%;
-            max-width: 850px;
-            align-items: center;
+            display: flex; flex-direction: column; gap: 15px; margin-top: 30px; width: 100%; max-width: 850px; align-items: center;
         }}
         .row {{ display: flex; width: 100%; justify-content: center; gap: 5px; }}
 
         /* BLOK STİLİ */
         .block {{
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #fff; 
-            border: 1px solid rgba(0,0,0,0.15);
-            cursor: grab;
-            border-radius: 6px;
-            font-size: 1.1rem;
-            height: 50px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.1s;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; 
+            border: 1px solid rgba(0,0,0,0.15); cursor: grab; border-radius: 6px; font-size: 1.1rem;
+            height: 50px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.1s;
         }}
         .block:active {{ cursor: grabbing; transform: scale(0.95); }}
 
         /* Sayı doğrusuna bırakılan blok */
         .drop-zone .block {{
-            height: 56px; 
-            border-radius: 4px 4px 0 0;
-            border-bottom: none;
-            margin: 0;
-            box-shadow: none;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            height: 56px; border-radius: 4px 4px 0 0; border-bottom: none; margin: 0; box-shadow: none; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
         }}
 
         /* RENKLER */
-        .c1 {{ background-color: #ff9ff3; width: 100%; color: #333; }}
         .c2 {{ background-color: #cd84f1; width: 150px; }}
         .c3 {{ background-color: #7d5fff; width: 100px; }}
         .c4 {{ background-color: #74b9ff; width: 80px; }}
@@ -216,12 +165,11 @@ with col2:
 
         <div class="number-line-wrapper">
             <div id="target" class="drop-zone" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
-            
             <div class="ticks-layer" id="ticks-container"></div>
             
             <div class="wholes-layer">
                 <div id="whole-1" class="whole-indicator" style="left: 0%;">1 TAM</div>
-                <div id="whole-2" class="whole-indicator" style="left: 50%;">1 TAM</div>
+                <div id="whole-2" class="whole-indicator" style="left: 50%;">2 TAM</div>
             </div>
         </div>
 
@@ -234,12 +182,15 @@ with col2:
                 <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
                 <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
                 <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
+                <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
+                <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
             </div>
+             <div style="font-size: 12px; color: #aaa;">(Dilediğiniz kadar parça alabilirsiniz)</div>
         </div>
 
     <script>
         let currentSum = 0;
-        const MAX_VAL = 2.0;
+        const MAX_VAL = 2.0; // Sayı doğrusu 2'ye kadar gidiyor
         const denom = {denom}; 
 
         // --- ÇİZİM FONKSİYONLARI ---
@@ -278,7 +229,11 @@ with col2:
             ev.preventDefault();
             const val = parseFloat(ev.dataTransfer.getData("val"));
             
-            if (currentSum + val > MAX_VAL + 0.001) return; 
+            // 2'yi geçmeyi engelle (Küçük bir tolerans ile)
+            if (currentSum + val > MAX_VAL + 0.001) {{
+                alert("Sayı doğrusunun sonuna (2) ulaştınız!");
+                return; 
+            }}
 
             const originalClass = ev.dataTransfer.getData("className");
             const content = ev.dataTransfer.getData("content");
@@ -286,6 +241,7 @@ with col2:
             const node = document.createElement("div");
             node.className = originalClass;
             node.innerText = content;
+            // Genişliği sayı doğrusunun toplam uzunluğuna (2 birim) göre oranla
             node.style.width = (val / MAX_VAL * 100) + "%";
             
             document.getElementById("target").appendChild(node);
@@ -296,22 +252,21 @@ with col2:
 
         // --- KONTROL MEKANİZMASI ---
         function checkWholeCondition() {{
-            // 1 Tam kontrolü (Hassas hesaplama)
+            // 1 Tam kontrolü
             if (currentSum >= 0.99) {{
                 const w1 = document.getElementById('whole-1');
                 if (!w1.classList.contains('visible')) {{
                     w1.classList.add('visible');
-                    // Sadece ilk defa 1 olunca konfeti patlat
-                    confetti({{ particleCount: 100, spread: 70, origin: {{ y: 0.5 }} }});
+                    confetti({{ particleCount: 80, spread: 60, origin: {{ y: 0.5 }}, colors: ['#ff9ff3', '#fd79a8'] }});
                 }}
             }}
             
-            // 2 Tam kontrolü (Ekstra özellik)
+            // 2 Tam kontrolü (Büyük kutlama)
             if (currentSum >= 1.99) {{
                 const w2 = document.getElementById('whole-2');
                 if (!w2.classList.contains('visible')) {{
                     w2.classList.add('visible');
-                    confetti({{ particleCount: 150, spread: 90, origin: {{ y: 0.5 }} }});
+                    confetti({{ particleCount: 150, spread: 100, origin: {{ y: 0.5 }} }});
                 }}
             }}
         }}
@@ -320,4 +275,4 @@ with col2:
     </html>
     """
 
-    components.html(html_code, height=600)
+    components.html(html_code, height=650)
