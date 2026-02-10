@@ -2,9 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Otomatik Kesir Modelleme", layout="wide")
+st.set_page_config(page_title="Bileşik Kesir Modelleme", layout="wide")
 
-st.markdown("<h2 style='text-align: center; color: #2c3e50;'>📏 Otomatik Sayı Doğrusu Modeli</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; color: #2c3e50;'>🧩 Sayı Doğrusunda Tam Sayılı Kesir Modeli</h2>", unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -13,7 +13,7 @@ with st.sidebar:
     denom = int(selected_option.split("/")[1])
     
     st.markdown("---")
-    st.info("💡 **Nasıl Çalışır?**\nÜstteki mavi alana parçaları sürükledikçe, alt tarafta '1 TAM' ve kalan parçalar otomatik olarak hizalanır.")
+    st.info("💡 **Nasıl Kullanılır?**\n1. Üst bölgeye parçaları sürükleyerek doldurun.\n2. 1 Tam dolduğunda altta pembe blok otomatik çıkacaktır.\n3. 1 Tamın yanındaki boşluğa parçaları kendiniz sürükleyip bırakın.")
     
     if st.button("🔄 Ekranı Sıfırla"):
         st.rerun()
@@ -27,7 +27,7 @@ html_code = f"""
 <style>
     :root {{
         --line-color: #0984e3;
-        --block-height: 50px;
+        --block-height: 55px;
         --max-width: 850px;
     }}
 
@@ -40,38 +40,40 @@ html_code = f"""
     
     .workspace {{
         width: 100%; max-width: var(--max-width);
-        background: white; border-radius: 20px; padding: 30px;
+        background: white; border-radius: 20px; padding: 40px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.05);
         display: flex; flex-direction: column; gap: 0;
     }}
 
     /* ÜST DROP ZONE */
     .zone-top {{
-        width: 100%; height: 70px;
+        width: 100%; height: 75px;
         display: flex; align-items: flex-end;
         border-bottom: 2px solid var(--line-color);
         position: relative;
     }}
 
-    /* SAYI VE ÇİZGİ KATMANI */
+    /* ORTA KATMAN (RAKAMLAR VE ÇİZGİLER) */
     .axis-layer {{
         width: 100%; height: 50px; position: relative;
     }}
     
     .tick {{ position: absolute; background-color: var(--line-color); transform: translateX(-50%); }}
-    .tick.major {{ width: 4px; height: 15px; top: 0; }}
-    .tick.minor {{ width: 2px; height: 8px; top: 0; opacity: 0.4; }}
+    .tick.major {{ width: 4px; height: 18px; top: 0; }}
+    .tick.minor {{ width: 2px; height: 10px; top: 0; opacity: 0.4; }}
     
     .label {{
-        position: absolute; top: 18px; transform: translateX(-50%);
-        font-weight: bold; font-size: 20px; color: var(--line-color);
+        position: absolute; top: 22px; transform: translateX(-50%);
+        font-weight: bold; font-size: 22px; color: var(--line-color);
     }}
 
-    /* ALT OTOMATİK ZONE */
+    /* ALT DROP ZONE (OTOMATİK + MANUEL) */
     .zone-bottom {{
-        width: 100%; height: 70px;
+        width: 100%; height: 75px;
         display: flex; align-items: flex-start;
         padding-top: 5px;
+        position: relative;
+        border-top: 2px solid #dfe6e9;
     }}
 
     /* BLOK STİLLERİ */
@@ -107,14 +109,14 @@ html_code = f"""
 <body>
 
     <div class="workspace">
-        <div id="target-top" class="zone-top" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+        <div id="target-top" class="zone-top" ondrop="dropTop(event)" ondragover="allowDrop(event)"></div>
 
         <div class="axis-layer" id="axis"></div>
 
-        <div id="target-bottom" class="zone-bottom"></div>
+        <div id="target-bottom" class="zone-bottom" ondrop="dropBottom(event)" ondragover="allowDrop(event)"></div>
     </div>
 
-    <div style="margin-top:20px; font-size:12px; color:#aaa;">PARÇA HAVUZU</div>
+    <div style="margin-top:20px; font-size:12px; color:#aaa; font-weight:bold;">PARÇA HAVUZU</div>
     <div class="pool">
         <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}" style="width: 100px;">1/{denom}</div>
         <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}" style="width: 100px;">1/{denom}</div>
@@ -123,7 +125,9 @@ html_code = f"""
 
 <script>
     const denom = {denom};
-    let currentSum = 0;
+    let topSum = 0;
+    let bottomSum = 0;
+    const MAX_VAL = 2.0;
 
     // --- EKSEN ÇİZİMİ ---
     function drawAxis() {{
@@ -142,7 +146,6 @@ html_code = f"""
     }}
     drawAxis();
 
-    // --- SÜRÜKLE BIRAK ---
     function allowDrop(ev) {{ ev.preventDefault(); }}
 
     function drag(ev) {{
@@ -151,49 +154,58 @@ html_code = f"""
         ev.dataTransfer.setData("val", ev.target.getAttribute("data-val"));
     }}
 
-    function drop(ev) {{
+    // --- ÜST BÖLGE BIRAKMA ---
+    function dropTop(ev) {{
         ev.preventDefault();
         const val = parseFloat(ev.dataTransfer.getData("val"));
-        if (currentSum + val > 2.01) return;
+        if (topSum + val > MAX_VAL + 0.01) return;
 
-        // ÜST BÖLGEYE EKLE
+        const node = createBlock(ev);
+        document.getElementById("target-top").appendChild(node);
+        topSum += val;
+
+        checkAutoWhole();
+    }}
+
+    // --- ALT BÖLGE BIRAKMA ---
+    function dropBottom(ev) {{
+        ev.preventDefault();
+        const val = parseFloat(ev.dataTransfer.getData("val"));
+        if (bottomSum + val > MAX_VAL + 0.01) return;
+
+        const node = createBlock(ev);
+        document.getElementById("target-bottom").appendChild(node);
+        bottomSum += val;
+    }}
+
+    function createBlock(ev) {{
+        const val = parseFloat(ev.dataTransfer.getData("val"));
         const node = document.createElement("div");
         node.className = ev.dataTransfer.getData("className");
         node.innerText = ev.dataTransfer.getData("content");
-        node.style.width = (val / 2 * 100) + "%";
-        document.getElementById("target-top").appendChild(node);
-        
-        currentSum += val;
-        updateBottomModel();
-
-        if (Math.abs(currentSum - 1.0) < 0.01) {{
-            confetti({{ particleCount: 100, spread: 70, origin: {{ y: 0.6 }} }});
-        }}
+        node.style.width = (val / MAX_VAL * 100) + "%";
+        node.setAttribute('data-val', val);
+        return node;
     }}
 
-    // --- OTOMATİK ALT MODELLEME ---
-    function updateBottomModel() {{
-        const bottom = document.getElementById("target-bottom");
-        bottom.innerHTML = ""; // Temizle
+    // --- OTOMATİK 1 TAM KONTROLÜ ---
+    function checkAutoWhole() {{
+        const bottomZone = document.getElementById("target-bottom");
+        const hasWhole = document.getElementById("auto-whole");
 
-        if (currentSum >= 0.99) {{
-            // 1 TAM BLOĞU EKLE
+        if (topSum >= 0.99 && !hasWhole) {{
             const full = document.createElement("div");
+            full.id = "auto-whole";
             full.className = "block pink-1";
             full.innerText = "1 TAM";
-            full.style.width = "50%"; // 0-2 aralığında yarısı
-            bottom.appendChild(full);
+            full.style.width = "50%"; // 0-2 aralığında %50 genişlik
+            full.setAttribute('data-val', 1.0);
+            
+            // Mevcut manuel eklenenlerden önce (en sola) ekle
+            bottomZone.prepend(full);
+            bottomSum += 1.0;
 
-            // KALAN PARÇAYI EKLE
-            let remainder = currentSum - 1.0;
-            if (remainder > 0.01) {{
-                const remNode = document.createElement("div");
-                remNode.className = "block c" + denom;
-                // Örn: 1/3
-                remNode.innerText = "1/" + denom;
-                remNode.style.width = (remainder / 2 * 100) + "%";
-                bottom.appendChild(remNode);
-            }}
+            confetti({{ particleCount: 100, spread: 70, origin: {{ y: 0.6 }} }});
         }}
     }}
 </script>
@@ -201,4 +213,4 @@ html_code = f"""
 </html>
 """
 
-components.html(html_code, height=600)
+components.html(html_code, height=650)
