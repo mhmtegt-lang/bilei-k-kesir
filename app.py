@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Kesir Laboratuvarı", layout="wide")
 
-st.markdown("<h3 style='text-align: center; color: #2c3e50;'>📏 Sayı Doğrusu Laboratuvarı: Bileşik ve Tam Sayılı Kesirler</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center; color: #2c3e50;'>📏 Sayı Doğrusu: Çift Taraflı Modelleme</h3>", unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -13,12 +13,13 @@ with st.sidebar:
     denom = int(selected_option.split("/")[1])
     
     st.markdown("---")
-    st.warning("💡 **İpucu:** '1 TAM' bloğunu sayı doğrusunun altına koyup, yanına 1/{denom} ekleyerek denklik modelini oluşturabilirsiniz.")
+    st.info("💡 **Nasıl Kullanılır?**\n'1 TAM' bloğunu veya parçaları çizginin **hem üstüne hem de altına** sürükleyebilirsiniz. Bütünün sağ tarafına parça ekleyerek bileşik kesirleri modelleyebilirsiniz.")
     
     if st.button("🔄 Ekranı Sıfırla"):
         st.rerun()
 
-# --- HTML/CSS/JS KODU ---
+# --- HTML/CSS/JS KODU (Hata Düzeltilmiş Versiyon) ---
+# F-string içindeki tüm CSS ve JS parantezleri {{ }} şeklinde çiftlenmiştir.
 html_code = f"""
 <!DOCTYPE html>
 <html>
@@ -43,9 +44,8 @@ html_code = f"""
         display: flex; flex-direction: column; gap: 10px;
     }}
 
-    /* --- SAYI DOĞRUSU SİSTEMİ --- */
     .number-line-system {{
-        background: white; border-radius: 15px; padding: 30px;
+        background: white; border-radius: 15px; padding: 40px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         position: relative; display: flex; flex-direction: column;
     }}
@@ -57,44 +57,39 @@ html_code = f"""
         box-sizing: border-box; transition: background 0.2s;
         border: 2px dashed transparent;
     }}
-    .drop-zone:hover {{ background-color: rgba(9, 132, 227, 0.05); border-color: #0984e3; }}
+    .drop-zone:hover {{ background-color: rgba(9, 132, 227, 0.03); border-color: rgba(9, 132, 227, 0.2); }}
 
-    /* Sayı doğrusu çizgisinin olduğu orta alan */
     .axis-container {{
-        width: 100%; height: 60px; position: relative;
-        border-top: 4px solid var(--line-color);
-        margin: 5px 0;
+        width: 100%; height: 2px; position: relative;
+        background-color: var(--line-color);
+        margin: 10px 0;
     }}
 
-    /* Çentikler ve Rakamlar */
     .tick {{ position: absolute; background-color: var(--line-color); transform: translateX(-50%); }}
-    .tick.major {{ width: 4px; height: 20px; top: -12px; }}
-    .tick.minor {{ width: 2px; height: 10px; top: -7px; opacity: 0.5; }}
+    .tick.major {{ width: 4px; height: 20px; top: -10px; }}
+    .tick.minor {{ width: 2px; height: 10px; top: -5px; opacity: 0.5; }}
     .label {{ position: absolute; top: 15px; transform: translateX(-50%); font-weight: bold; font-size: 20px; color: #2d3436; }}
 
     /* OK UÇLARI */
-    .axis-container::before {{ content: ''; position: absolute; top: -11px; left: -10px; border-width: 8px 12px 8px 0; border-color: transparent var(--line-color) transparent transparent; border-style: solid; }}
-    .axis-container::after {{ content: ''; position: absolute; top: -11px; right: -10px; border-width: 8px 0 8px 12px; border-color: transparent transparent transparent var(--line-color); border-style: solid; }}
+    .axis-container::before {{ content: ''; position: absolute; top: -9px; left: -10px; border-width: 10px 15px 10px 0; border-color: transparent var(--line-color) transparent transparent; border-style: solid; }}
+    .axis-container::after {{ content: ''; position: absolute; top: -9px; right: -10px; border-width: 10px 0 10px 15px; border-color: transparent transparent transparent var(--line-color); border-style: solid; }}
 
-    /* --- BLOKLARIN GÖRÜNÜMÜ --- */
+    /* BLOKLAR */
     .block {{
         display: flex; align-items: center; justify-content: center;
         font-weight: bold; border: 1px solid rgba(0,0,0,0.1);
         cursor: grab; border-radius: 6px; font-size: 1.1rem;
-        box-sizing: border-box; transition: transform 0.1s;
+        box-sizing: border-box; height: 60px;
     }}
-    .block:active {{ transform: scale(0.95); cursor: grabbing; }}
 
-    /* Üsttekiler çizgiye yaslansın */
     .drop-zone-top {{ align-items: flex-end; }}
-    .drop-zone-top .block {{ border-radius: 6px 6px 0 0; border-bottom: none; height: 60px; }}
+    .drop-zone-top .block {{ border-radius: 6px 6px 0 0; border-bottom: none; }}
 
-    /* Alttakiler çizgiye asılsın */
     .drop-zone-bottom {{ align-items: flex-start; }}
-    .drop-zone-bottom .block {{ border-radius: 0 0 6px 6px; border-top: none; height: 60px; }}
+    .drop-zone-bottom .block {{ border-radius: 0 0 6px 6px; border-top: none; }}
 
     /* RENKLER */
-    .pink-1 {{ background-color: #ff9ff3; width: 50%; color: #333; }} /* 1 Tam (0-2 aralığında %50 genişlik) */
+    .pink-1 {{ background-color: #ff9ff3; color: #333; }}
     .frac-block {{ color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }}
     .c2 {{ background-color: #cd84f1; }}
     .c3 {{ background-color: #7d5fff; }}
@@ -102,13 +97,13 @@ html_code = f"""
     .c5 {{ background-color: #81ecec; color: #333; }}
     .c6 {{ background-color: #55efc4; color: #333; }}
 
-    /* HAVUZ ALANI */
     .pool {{
-        display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+        display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;
         background: white; padding: 20px; border-radius: 15px; margin-top: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }}
-    .pool-section {{ display: flex; flex-direction: column; align-items: center; gap: 5px; }}
-    .pool-title {{ font-size: 12px; color: #aaa; font-weight: bold; }}
+    .pool-section {{ display: flex; flex-direction: column; align-items: center; gap: 10px; }}
+    .pool-title {{ font-size: 12px; color: #aaa; font-weight: bold; text-transform: uppercase; }}
 
 </style>
 </head>
@@ -117,28 +112,23 @@ html_code = f"""
 <div class="main-wrapper">
     <div class="number-line-system">
         <div id="target-top" class="drop-zone drop-zone-top" ondrop="handleDrop(event)" ondragover="allowDrop(event)"></div>
-        
         <div class="axis-container" id="axis"></div>
-
         <div id="target-bottom" class="drop-zone drop-zone-bottom" ondrop="handleDrop(event)" ondragover="allowDrop(event)"></div>
     </div>
 
     <div class="pool">
         <div class="pool-section">
-            <div class="pool-title">REFERANS</div>
-            <div class="block pink-1" draggable="true" ondragstart="drag(event)" data-val="1">1 TAM</div>
+            <div class="pool-title">Referans Blok</div>
+            <div class="block pink-1" draggable="true" ondragstart="drag(event)" data-val="1" style="width: 200px;">1 TAM</div>
         </div>
         <div class="pool-section">
-            <div class="pool-title">KESİR PARÇALARI (1/{denom})</div>
-            <div style="display:flex; gap:5px;">
-                <div class="block frac-block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}" style="width: calc(100% / {denom} / 2)">1/{denom}</div>
-                <div class="block frac-block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}" style="width: calc(100% / {denom} / 2)">1/{denom}</div>
-                <div class="block frac-block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}" style="width: calc(100% / {denom} / 2)">1/{denom}</div>
+            <div class="pool-title">Parçalar (1/{denom})</div>
+            <div style="display:flex; gap:8px;">
+                <div class="block frac-block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}" style="width: 80px;">1/{denom}</div>
+                <div class="block frac-block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}" style="width: 80px;">1/{denom}</div>
+                <div class="block frac-block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}" style="width: 80px;">1/{denom}</div>
             </div>
         </div>
-    </div>
-    <div style="text-align: center; color: #aaa; font-size: 12px; margin-top: 10px;">
-        * Parçaları istediğiniz bölgeye (çizginin üstü veya altı) sürükleyebilirsiniz. Sınırsız sayıda parça mevcuttur.
     </div>
 </div>
 
@@ -146,7 +136,6 @@ html_code = f"""
     const denom = {denom};
     const MAX_VAL = 2.0;
 
-    // --- EKSEN ÇİZİMİ ---
     function initAxis() {{
         const axis = document.getElementById('axis');
         const subTicks = denom * 2;
@@ -163,7 +152,6 @@ html_code = f"""
     }}
     initAxis();
 
-    // --- SÜRÜKLE BIRAK ---
     function allowDrop(ev) {{ ev.preventDefault(); }}
 
     function drag(ev) {{
@@ -174,37 +162,30 @@ html_code = f"""
 
     function handleDrop(ev) {{
         ev.preventDefault();
-        // Hangi bölgeye bırakıldığını 'currentTarget' ile kesinleştiriyoruz
         const zone = ev.currentTarget;
         
         const val = parseFloat(ev.dataTransfer.getData("val"));
         const className = ev.dataTransfer.getData("className");
         const content = ev.dataTransfer.getData("content");
 
-        // Bölgedeki mevcut doluluğu kontrol et (Görsel taşmayı önlemek için basit kontrol)
         let sum = 0;
         zone.querySelectorAll('.block').forEach(b => {{
             sum += parseFloat(b.getAttribute('data-val'));
         }});
         
         if (sum + val > MAX_VAL + 0.01) {{
-            alert("Bu bölge doldu (Maksimum 2 tam)!");
             return;
-        }
+        }}
 
-        // Yeni bloğu oluştur ve ekle
         const node = document.createElement("div");
         node.className = className;
         node.innerText = content;
         node.setAttribute('data-val', val);
-        
-        // Genişlik hesabı: 0-2 aralığı olduğu için değeri 2'ye bölüp yüzdeye çeviriyoruz
         node.style.width = (val / MAX_VAL * 100) + "%";
         
         zone.appendChild(node);
 
-        // Tam sayıya ulaşınca kutlama
-        if (Math.abs((sum + val) - 1.0) < 0.01 || Math.abs((sum + val) - 2.0) < 0.01) {{
+        if (Math.abs((sum + val) - 1.0) < 0.01) {{
             confetti({{ particleCount: 100, spread: 70, origin: {{ y: 0.6 }} }});
         }}
     }}
