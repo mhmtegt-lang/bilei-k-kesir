@@ -2,269 +2,306 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Sayı Doğrusu Atölyesi", layout="centered")
+st.set_page_config(page_title="Sayı Doğrusu Modeli", layout="wide")
 
-st.markdown("<h2 style='text-align: center; color: #2c3e50;'>📏 Sayı Doğrusu ve Kesir Modelleri</h2>", unsafe_allow_html=True)
-
-# Streamlit üzerinden bölme sayısını seçelim
-st.write("### 1. Sayı Doğrusu Bölmelerini Ayarla")
-div_denom = st.selectbox("Sayı doğrusu kaça bölünsün? (0-1 arası)", [2, 3, 4, 5, 6], index=1)
-
-# --- HTML/CSS/JS KODU ---
-html_code = f"""
-<!DOCTYPE html>
-<html>
-<head>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+# --- CSS STİLLERİ (STREAMLIT ARAYÜZÜ İÇİN) ---
+st.markdown("""
 <style>
-    :root {{
-        --line-color: #00a8ff;
-        --bg-color: #fcfcfc;
-    }}
-
-    body {{ 
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-        background-color: var(--bg-color); 
-        display: flex; 
-        flex-direction: column; 
-        align-items: center; 
-        margin: 0;
-        padding: 20px;
-        overflow-x: hidden;
-    }}
-    
-    .main-container {{
-        width: 100%;
-        max-width: 800px;
-        display: flex;
-        flex-direction: column;
-        gap: 30px;
-    }}
-
-    /* SAYI DOĞRUSU ALANI */
-    .number-line-container {{
-        position: relative;
-        width: 100%;
-        height: 140px;
-        margin-top: 40px;
-    }}
-
-    /* Drop Zone (Sayı doğrusunun tam üstü) */
-    .drop-zone {{
-        width: 100%;
-        height: 50px;
-        display: flex;
-        align-items: flex-end;
-        justify-content: flex-start;
-        position: relative;
-        border-bottom: 3px solid var(--line-color);
-        box-sizing: border-box;
-        z-index: 2;
-    }}
-
-    /* Ana Sayı Doğrusu Çizgisi ve Oklar */
-    .drop-zone::before, .drop-zone::after {{
-        content: '';
-        position: absolute;
-        bottom: -8px;
-        width: 15px;
-        height: 3px;
-        background-color: var(--line-color);
-    }}
-    .drop-zone::before {{ left: -5px; transform: rotate(-45deg); origin: right; }}
-    .drop-zone::after {{ right: -5px; transform: rotate(45deg); origin: left; }}
-
-    /* Sayı doğrusu üzerindeki ana noktalar ve sayılar */
-    .ticks {{
-        position: absolute;
-        width: 100%;
-        top: 50px;
-        z-index: 1;
-    }}
-
-    .main-tick {{
-        position: absolute;
-        height: 16px;
-        width: 16px;
-        background-color: var(--line-color);
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-        top: 0;
-    }}
-
-    .sub-tick {{
-        position: absolute;
-        height: 8px;
-        width: 8px;
-        background-color: var(--line-color);
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-        top: 0;
-        opacity: 0.6;
-    }}
-
-    .tick-label {{
-        position: absolute;
-        top: 15px;
-        font-weight: bold;
-        transform: translateX(-50%);
-        color: #2c3e50;
-        font-size: 20px;
-    }}
-
-    /* KESİR TAKIMI (ALTTAKİ BLOKLAR) */
-    .fraction-wall {{
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        background: white;
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    }}
-
-    .row {{ display: flex; width: 100%; height: 55px; gap: 6px; }}
-
-    .block {{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        color: #2c3e50;
-        border: 1px solid rgba(0,0,0,0.1);
-        cursor: grab;
-        border-radius: 8px;
-        font-size: 1.1rem;
-        box-sizing: border-box;
-        transition: all 0.2s;
-    }}
-
-    .block:hover {{ transform: scale(1.02); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }}
-
-    /* BIRAKILAN PARÇALARIN STİLİ */
-    .drop-zone .block {{
-        height: 45px;
-        border-radius: 4px 4px 0 0;
-        border-bottom: none;
-    }}
-
-    /* RENK PALETİ (Görsellerle birebir) */
-    .c1 {{ background-color: #ff9ff3; width: 100%; }}   /* 1 Tam */
-    .c2 {{ background-color: #d980fa; width: 50%; }}   /* 1/2 */
-    .c3 {{ background-color: #a29bfe; width: 33.33%; }} /* 1/3 */
-    .c4 {{ background-color: #74b9ff; width: 25%; }}   /* 1/4 */
-    .c5 {{ background-color: #81ecec; width: 20%; }}   /* 1/5 */
-
-    .btn-reset {{
-        padding: 10px 25px;
-        background-color: #2d3436;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: bold;
-        margin-bottom: 20px;
-    }}
+    .stApp { background-color: #f8f9fa; }
+    .sidebar .sidebar-content { background-color: #eec9d2; }
+    h1, h2, h3 { color: #2c3e50; font-family: 'Segoe UI', sans-serif; }
 </style>
-</head>
-<body>
+""", unsafe_allow_html=True)
 
-    <button class="btn-reset" onclick="resetAll()">Sıfırla ve Temizle</button>
+# --- SIDEBAR (SOL PANEL) ---
+with st.sidebar:
+    st.header("⚙️ Ayarlar")
+    st.write("Çalışmak istediğiniz birim kesri seçin:")
+    
+    # Seçim Kutusu (Radio Button daha kullanışlı)
+    selected_option = st.radio(
+        "Birim Kesir:",
+        options=["1/2", "1/3", "1/4", "1/5", "1/6"],
+        index=1 # Varsayılan 1/3
+    )
+    
+    # Seçimi sayıya çevir (Örn: "1/4" -> 4)
+    denom = int(selected_option.split("/")[1])
+    
+    st.markdown("---")
+    st.info(f"💡 **Bilgi:** Şu an sayı doğrusu **{denom}** eşit parçaya bölündü.")
+    st.markdown("---")
+    
+    # Sıfırlama Butonu (Session State kullanmadığımız için sayfayı yeniler gibi davranacak JS tarafında)
+    if st.button("🔄 Ekranı Temizle"):
+        st.rerun()
 
-    <div class="main-container">
+# --- ANA SAYFA ---
+col1, col2 = st.columns([1, 10]) # Ortalamak için boşluk
+
+with col2:
+    st.title(f"📏 Sayı Doğrusunda {selected_option}'leri Göster")
+    st.markdown("Soldaki menüden seçtiğiniz parçaları sürükleyip sayı doğrusu üzerine bırakın.")
+
+    # --- HTML/CSS/JS KODU ---
+    html_code = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {{
+            --line-color: #0984e3;
+            --bg-color: #ffffff;
+            --text-color: #2d3436;
+        }}
+
+        body {{ 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: transparent; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            margin: 0;
+            padding: 10px;
+            user-select: none;
+        }}
         
-        <div class="number-line-container">
+        /* SAYI DOĞRUSU ALANI */
+        .number-line-wrapper {{
+            position: relative;
+            width: 100%;
+            max-width: 850px;
+            height: 160px;
+            margin-top: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            padding: 20px;
+            box-sizing: border-box;
+        }}
+
+        /* Drop Zone (Bırakma Alanı) */
+        .drop-zone {{
+            width: 100%;
+            height: 60px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            position: relative;
+            border-bottom: 4px solid var(--line-color);
+            z-index: 2;
+        }}
+
+        /* Ok Uçları */
+        .drop-zone::before {{ 
+            content: ''; position: absolute; bottom: -10px; left: -10px; 
+            border-width: 10px 15px 10px 0; border-color: transparent var(--line-color) transparent transparent; border-style: solid;
+        }}
+        .drop-zone::after {{ 
+            content: ''; position: absolute; bottom: -10px; right: -10px; 
+            border-width: 10px 0 10px 15px; border-color: transparent transparent transparent var(--line-color); border-style: solid;
+        }}
+
+        /* Çentikler (Ticks) */
+        .ticks-layer {{
+            position: absolute;
+            width: calc(100% - 40px); /* Padding payı */
+            left: 20px;
+            top: 80px; /* Drop zone altı */
+            height: 50px;
+            pointer-events: none;
+        }}
+
+        .tick-mark {{
+            position: absolute;
+            background-color: var(--line-color);
+            transform: translateX(-50%);
+        }}
+
+        .tick-main {{
+            height: 20px; width: 4px; top: 0;
+        }}
+        
+        .tick-sub {{
+            height: 10px; width: 2px; top: 0; opacity: 0.6;
+        }}
+
+        .tick-label {{
+            position: absolute;
+            top: 25px;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-color);
+        }}
+
+        /* BLOKLAR ALANI */
+        .fraction-pool {{
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 30px;
+            width: 100%;
+            max-width: 850px;
+            align-items: center;
+        }}
+
+        .pool-label {{
+            font-size: 14px; color: #636e72; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;
+        }}
+
+        .row {{ display: flex; width: 100%; justify-content: center; gap: 5px; }}
+
+        /* BLOK STİLİ */
+        .block {{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #333; /* Daha okunabilir olması için koyu renk yazı */
+            border: 1px solid rgba(0,0,0,0.15);
+            cursor: grab;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            height: 50px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }}
+
+        .block:active {{ cursor: grabbing; transform: scale(0.95); }}
+
+        /* Sayı doğrusuna bırakılan blok */
+        .drop-zone .block {{
+            height: 56px; /* Çizgiye tam otursun */
+            border-radius: 4px 4px 0 0;
+            border-bottom: none;
+            margin: 0;
+            box-shadow: none;
+            color: white; /* Sayı doğrusunda beyaz yazı şık durur */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }}
+
+        /* RENKLER (Resimden alındı) */
+        .c1 {{ background-color: #ff9ff3; width: 100%; color: #333; }}       /* 1 Tam */
+        .c2 {{ background-color: #cd84f1; width: 150px; color: white; }}   /* 1/2 Mor */
+        .c3 {{ background-color: #7d5fff; width: 100px; color: white; }}   /* 1/3 Koyu Mor/Mavi */
+        .c4 {{ background-color: #74b9ff; width: 80px; color: white; }}    /* 1/4 Mavi */
+        .c5 {{ background-color: #81ecec; width: 70px; color: #333; }}     /* 1/5 Turkuaz */
+        .c6 {{ background-color: #55efc4; width: 60px; color: #333; }}     /* 1/6 Yeşil */
+
+    </style>
+    </head>
+    <body>
+
+        <div class="number-line-wrapper">
             <div id="target" class="drop-zone" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
-            <div class="ticks" id="ticks-container">
-                </div>
+            <div class="ticks-layer" id="ticks-container"></div>
         </div>
 
-        <div style="text-align: center; color: #636e72;">👇 Parçaları sayı doğrusuna taşıyın</div>
+        <div class="fraction-pool">
+            
+            <div class="pool-label">Referans Blok</div>
+            <div class="row" style="width: 100%;">
+                 <div class="block c1" draggable="true" ondragstart="drag(event)" data-val="1">1 TAM</div>
+            </div>
 
-        <div class="fraction-wall">
+            <div class="pool-label" style="margin-top: 15px;">Kullanılabilir Parçalar (1/{denom})</div>
             <div class="row">
-                <div class="block c1" draggable="true" ondragstart="drag(event)" data-val="1">1</div>
+                <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
+                <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
+                <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
+                <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
+                <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
+                <div class="block c{denom}" draggable="true" ondragstart="drag(event)" data-val="{1/denom:.5f}">1/{denom}</div>
             </div>
-            <div class="row">
-                <div class="block c2" draggable="true" ondragstart="drag(event)" data-val="0.5">1/2</div>
-                <div class="block c2" draggable="true" ondragstart="drag(event)" data-val="0.5">1/2</div>
-            </div>
-            <div class="row">
-                <div class="block c3" draggable="true" ondragstart="drag(event)" data-val="0.33333">1/3</div>
-                <div class="block c3" draggable="true" ondragstart="drag(event)" data-val="0.33333">1/3</div>
-                <div class="block c3" draggable="true" ondragstart="drag(event)" data-val="0.33333">1/3</div>
-            </div>
-            <div class="row">
-                <div class="block c4" draggable="true" ondragstart="drag(event)" data-val="0.25">1/4</div>
-                <div class="block c4" draggable="true" ondragstart="drag(event)" data-val="0.25">1/4</div>
-                <div class="block c4" draggable="true" ondragstart="drag(event)" data-val="0.25">1/4</div>
-                <div class="block c4" draggable="true" ondragstart="drag(event)" data-val="0.25">1/4</div>
-            </div>
+             <div style="font-size: 12px; color: #aaa; margin-top: 5px;">(İhtiyaç duydukça sürükleyebilirsiniz, sınırsızdır)</div>
         </div>
-    </div>
 
-<script>
-    let currentSum = 0;
-    const MAX_VAL = 2.0;
-    const denom = {div_denom}; // Streamlit'ten gelen payda
+    <script>
+        let currentSum = 0;
+        const MAX_VAL = 2.0;
+        const denom = {denom}; 
 
-    // Sayı doğrusu çentiklerini çiz
-    function drawTicks() {{
-        const container = document.getElementById('ticks-container');
-        container.innerHTML = '';
-        
-        // 0, 1, 2 ana noktaları
-        for(let i=0; i<=2; i++) {{
-            let pos = (i / 2) * 100;
-            container.innerHTML += `<div class="main-tick" style="left: ${{pos}}%"></div>`;
-            container.innerHTML += `<div class="tick-label" style="left: ${{pos}}%">${{i}}</div>`;
-        }
+        // --- SAYI DOĞRUSU ÇİZİMİ ---
+        function drawTicks() {{
+            const container = document.getElementById('ticks-container');
+            container.innerHTML = '';
+            
+            // Toplam uzunluk (0-2 arası)
+            const totalRange = 2;
+            
+            // Kaç tane küçük aralık olacak? (Payda * 2) -> Örn: 1/3 ise 0-2 arasında 6 parça olur.
+            const totalSubTicks = denom * totalRange;
 
-        // Ara çentikler (Streamlit'ten seçilen paydaya göre)
-        for(let i=1; i < denom * 2; i++) {{
-            if (i % denom === 0) continue; // Ana noktalarla çakışmasın
-            let pos = (i / (denom * 2)) * 100;
-            container.innerHTML += `<div class="sub-tick" style="left: ${{pos}}%"></div>`;
-        }
-    }
+            for(let i=0; i <= totalSubTicks; i++) {{
+                // Konum hesapla (Yüzde olarak)
+                let pos = (i / totalSubTicks) * 100;
+                
+                // Değer hesapla
+                let val = i / denom;
+                
+                // Ana sayı mı (Tam sayı)?
+                let isMain = (i % denom === 0);
 
-    drawTicks();
+                if (isMain) {{
+                    container.innerHTML += `<div class="tick-mark tick-main" style="left: ${{pos}}%"></div>`;
+                    container.innerHTML += `<div class="tick-label" style="left: ${{pos}}%">${{val}}</div>`;
+                }} else {{
+                    container.innerHTML += `<div class="tick-mark tick-sub" style="left: ${{pos}}%"></div>`;
+                }}
+            }}
+        }}
 
-    function allowDrop(ev) {{ ev.preventDefault(); }}
+        // Başlangıçta çiz
+        drawTicks();
 
-    function drag(ev) {{
-        ev.dataTransfer.setData("className", ev.target.className); 
-        ev.dataTransfer.setData("content", ev.target.innerText);
-        ev.dataTransfer.setData("val", ev.target.getAttribute("data-val"));
-    }}
+        // --- SÜRÜKLE BIRAK MANTIĞI ---
+        function allowDrop(ev) {{ ev.preventDefault(); }}
 
-    function drop(ev) {{
-        ev.preventDefault();
-        const val = parseFloat(ev.dataTransfer.getData("val"));
-        
-        if (currentSum + val > MAX_VAL + 0.001) return;
+        function drag(ev) {{
+            // CSS sınıfını taşı (renk için)
+            ev.dataTransfer.setData("className", ev.target.className); 
+            ev.dataTransfer.setData("content", ev.target.innerText);
+            ev.dataTransfer.setData("val", ev.target.getAttribute("data-val"));
+        }}
 
-        const node = document.createElement("div");
-        node.className = ev.dataTransfer.getData("className");
-        node.innerText = ev.dataTransfer.getData("content");
-        node.style.width = (val / MAX_VAL * 100) + "%";
-        
-        document.getElementById("target").appendChild(node);
-        currentSum += val;
+        function drop(ev) {{
+            ev.preventDefault();
+            const val = parseFloat(ev.dataTransfer.getData("val"));
+            
+            // 2'yi geçmesin
+            if (currentSum + val > MAX_VAL + 0.001) {{
+                return; 
+            }}
 
-        if (Math.abs(currentSum - 1.0) < 0.02 || Math.abs(currentSum - 2.0) < 0.02) {{
-            confetti({{ particleCount: 100, spread: 70, origin: {{ y: 0.3 }} }});
-        }
-    }}
+            const originalClass = ev.dataTransfer.getData("className");
+            const content = ev.dataTransfer.getData("content");
+            
+            const node = document.createElement("div");
+            node.className = originalClass;
+            node.innerText = content;
+            
+            // Genişliği sayı doğrusuna oranla hesapla
+            // val (kesir değeri) / MAX_VAL (2) * 100
+            node.style.width = (val / MAX_VAL * 100) + "%";
+            
+            document.getElementById("target").appendChild(node);
+            currentSum += val;
 
-    function resetAll() {{
-        document.getElementById("target").innerHTML = '';
-        currentSum = 0;
-    }}
-</script>
-</body>
-</html>
-"""
+            // Efektler
+            checkWinCondition();
+        }}
 
-# Komponenti görüntüle
-components.html(html_code, height=850, scrolling=False)
+        function checkWinCondition() {{
+            // Tam sayılara (1 veya 2) çok yaklaştı mı?
+            if (Math.abs(currentSum - 1.0) < 0.01 || Math.abs(currentSum - 2.0) < 0.01) {{
+                confetti({{ particleCount: 100, spread: 70, origin: {{ y: 0.4 }} }});
+            }}
+        }}
+    </script>
+    </body>
+    </html>
+    """
+
+    components.html(html_code, height=600)
