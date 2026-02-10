@@ -2,9 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Kesir Duvarı Eğitimi", layout="centered")
+st.set_page_config(page_title="Sayı Doğrusunda Kesirler", layout="centered")
 
-st.markdown("<h3 style='text-align: center; color: #2c3e50;'>🧩 Kesirleri Bütüne Tamamla</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center; color: #2c3e50;'>📏 Sayı Doğrusunda Kesirleri İlerlet</h3>", unsafe_allow_html=True)
 
 # --- HTML/CSS/JS KODU ---
 html_code = """
@@ -14,59 +14,73 @@ html_code = """
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 <style>
     :root {
-        --row-height: 65px;
-        --max-width: 700px;
-        --border-radius: 10px;
+        --line-height: 80px;
+        --max-width: 800px;
+        --line-color: #3498db;
     }
 
     body { 
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        font-family: 'Segoe UI', sans-serif; 
         background-color: transparent; 
         display: flex; 
         flex-direction: column; 
         align-items: center; 
-        margin: 0;
-        padding: 10px;
+        padding: 20px;
     }
     
-    /* ANA KONTEYNER (DİKEY SIRALAMA) */
     .main-container {
         width: 100%;
         max-width: var(--max-width);
         display: flex;
         flex-direction: column;
-        gap: 15px; /* Bloklar arası boşluk */
+        gap: 40px;
     }
 
-    /* HEDEF ALAN (1 BLOĞU İLE AYNI BOYUTTA) */
+    /* SAYI DOĞRUSU ALANI */
+    .number-line-container {
+        position: relative;
+        width: 100%;
+        height: 120px;
+        margin-bottom: 20px;
+    }
+
+    /* Kesirlerin bırakılacağı drop zone (Sayı doğrusunun hemen üstü) */
     .drop-zone {
         width: 100%;
-        height: var(--row-height);
-        border: 3px dashed #ff9ff3;
-        background-color: rgba(255, 159, 243, 0.05);
+        height: 50px;
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: flex-start;
         position: relative;
-        border-radius: var(--border-radius);
-        overflow: hidden;
+        border-bottom: 3px solid var(--line-color);
         box-sizing: border-box;
     }
 
-    .drop-zone.completed {
-        border: 3px solid #ff9ff3;
-        background-color: white;
-    }
-
-    .target-label {
+    /* Sayı doğrusu üzerindeki ana çizgiler ve sayılar */
+    .ticks {
         position: absolute;
         width: 100%;
-        text-align: center;
-        font-size: 32px;
-        font-weight: bold;
-        color: #ff9ff3;
+        display: flex;
+        justify-content: space-between;
+        top: 50px;
         z-index: 0;
-        pointer-events: none;
+    }
+
+    .tick {
+        position: absolute;
+        height: 15px;
+        width: 3px;
+        background-color: var(--line-color);
+        transform: translateX(-50%);
+    }
+
+    .tick-label {
+        position: absolute;
+        top: 20px;
+        font-weight: bold;
+        transform: translateX(-50%);
+        color: #2c3e50;
+        font-size: 18px;
     }
 
     /* KESİR DUVARI SIRALARI */
@@ -76,12 +90,7 @@ html_code = """
         gap: 8px;
     }
 
-    .row { 
-        display: flex; 
-        width: 100%; 
-        height: var(--row-height); 
-        gap: 4px; 
-    }
+    .row { display: flex; width: 100%; height: 50px; gap: 4px; }
 
     /* BLOK STİLLERİ */
     .block {
@@ -89,77 +98,77 @@ html_code = """
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        color: #2c3e50;
+        color: #fff;
         border: 1px solid rgba(0,0,0,0.1);
         cursor: grab;
-        border-radius: var(--border-radius);
-        font-size: 1.2rem;
-        z-index: 1;
+        border-radius: 6px;
+        font-size: 1rem;
         box-sizing: border-box;
-        transition: transform 0.2s;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
     }
 
-    .block:active { cursor: grabbing; transform: scale(0.98); }
-
-    /* HEDEF İÇİNDEKİ PARÇALAR */
+    /* SAYI DOĞRUSUNA BIRAKILAN PARÇALARIN ÖZEL STİLİ */
     .drop-zone .block {
-        height: 100%;
-        border-radius: 0; /* İçeridekiler birleşsin diye */
-        border-top: none;
-        border-bottom: none;
-        cursor: default;
+        height: 40px;
+        border-radius: 4px 4px 0 0;
+        position: relative;
+        margin-bottom: 0;
     }
 
-    /* RENK PALETİ (Yüklediğin görsellere göre) */
-    .c1 { background-color: #ff9ff3; width: 100%; }   /* 1 */
+    /* RENKLER */
     .c2 { background-color: #d980fa; width: 50%; }   /* 1/2 */
-    .c3 { background-color: #a29bfe; width: 33.33%; } /* 1/3 */
+    .c3 { background-color: #a29bfe; width: 33.333%; } /* 1/3 */
     .c4 { background-color: #74b9ff; width: 25%; }   /* 1/4 */
     .c5 { background-color: #81ecec; width: 20%; }   /* 1/5 */
 
-    /* TEMİZLE BUTONU */
-    .reset-area {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 10px;
-    }
     .btn-reset {
-        padding: 8px 20px;
+        padding: 10px 20px;
         background-color: #34495e;
         color: white;
         border: none;
         border-radius: 5px;
         cursor: pointer;
         font-weight: bold;
-        transition: background 0.3s;
+        margin-bottom: 10px;
     }
-    .btn-reset:hover { background-color: #2c3e50; }
 </style>
 </head>
 <body>
 
     <div class="main-container">
         
-        <div class="reset-area">
-            <button class="btn-reset" onclick="resetAll()">Temizle ve Yeniden Başla</button>
+        <div style="text-align:center;">
+            <button class="btn-reset" onclick="resetAll()">Sıfırla</button>
         </div>
 
-        <div id="target" class="drop-zone" ondrop="drop(event)" ondragover="allowDrop(event)">
-            <div class="target-label">1</div>
+        <div class="number-line-container">
+            <div id="target" class="drop-zone" ondrop="drop(event)" ondragover="allowDrop(event)">
+                </div>
+            <div class="ticks">
+                <div style="left: 0%;">
+                    <div class="tick"></div>
+                    <div class="tick-label">0</div>
+                </div>
+                <div style="left: 50%;">
+                    <div class="tick"></div>
+                    <div class="tick-label">1</div>
+                </div>
+                <div style="left: 100%;">
+                    <div class="tick"></div>
+                    <div class="tick-label">2</div>
+                </div>
+            </div>
         </div>
 
         <div class="fraction-wall">
             <div class="row">
-                <div class="block c1" draggable="true" ondragstart="drag(event)" data-val="1">1</div>
-            </div>
-            <div class="row">
                 <div class="block c2" draggable="true" ondragstart="drag(event)" data-val="0.5">1/2</div>
                 <div class="block c2" draggable="true" ondragstart="drag(event)" data-val="0.5">1/2</div>
             </div>
             <div class="row">
-                <div class="block c3" draggable="true" ondragstart="drag(event)" data-val="0.3333">1/3</div>
-                <div class="block c3" draggable="true" ondragstart="drag(event)" data-val="0.3333">1/3</div>
-                <div class="block c3" draggable="true" ondragstart="drag(event)" data-val="0.3333">1/3</div>
+                <div class="block c3" draggable="true" ondragstart="drag(event)" data-val="0.33333">1/3</div>
+                <div class="block c3" draggable="true" ondragstart="drag(event)" data-val="0.33333">1/3</div>
+                <div class="block c3" draggable="true" ondragstart="drag(event)" data-val="0.33333">1/3</div>
             </div>
             <div class="row">
                 <div class="block c4" draggable="true" ondragstart="drag(event)" data-val="0.25">1/4</div>
@@ -180,6 +189,7 @@ html_code = """
 
 <script>
     let currentSum = 0;
+    const MAX_VAL = 2.0; // Sayı doğrusu 0-2 arası
 
     function allowDrop(ev) { ev.preventDefault(); }
 
@@ -193,9 +203,9 @@ html_code = """
         ev.preventDefault();
         const val = parseFloat(ev.dataTransfer.getData("val"));
         
-        // Hassas matematiksel kontrol (floating point hatasını engellemek için)
-        if (currentSum + val > 1.001) {
-            return; // 1'i aşarsa ekleme
+        if (currentSum + val > MAX_VAL + 0.01) {
+            alert("Sayı doğrusunun dışına çıktınız (2'yi geçtiniz)!");
+            return;
         }
 
         const className = ev.dataTransfer.getData("className");
@@ -205,22 +215,25 @@ html_code = """
         node.className = className;
         node.innerText = content;
         
+        // Sayı doğrusu 0-2 arası olduğu için genişliği yarıya bölüyoruz.
+        // %100 genişlik = 2 birim. Dolayısıyla 1/2 (0.5) genişliği %25 olmalı.
+        node.style.width = (val / MAX_VAL * 100) + "%";
+        
         document.getElementById("target").appendChild(node);
         currentSum += val;
 
-        if (currentSum >= 0.99) {
+        // Tam sayılara (1 veya 2) ulaşıldığında kutlama
+        if (Math.abs(currentSum - 1.0) < 0.02 || Math.abs(currentSum - 2.0) < 0.02) {
             confetti({
-                particleCount: 100,
+                particleCount: 150,
                 spread: 70,
-                origin: { y: 0.6 }
+                origin: { y: 0.3 }
             });
-            document.getElementById("target").classList.add("completed");
         }
     }
 
     function resetAll() {
-        document.getElementById("target").innerHTML = '<div class="target-label">1</div>';
-        document.getElementById("target").classList.remove("completed");
+        document.getElementById("target").innerHTML = '';
         currentSum = 0;
     }
 </script>
@@ -229,5 +242,4 @@ html_code = """
 </html>
 """
 
-# HTML bileşenini yükle
-components.html(html_code, height=650, scrolling=False)
+components.html(html_code, height=700, scrolling=False)
