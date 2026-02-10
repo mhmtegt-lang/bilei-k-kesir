@@ -1,137 +1,138 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import math
 
-# --- AYARLAR ---
-st.set_page_config(page_title="Kesir Modelleme", layout="wide")
+# --- SAYFA AYARLARI ---
+st.set_page_config(
+    page_title="İnteraktif Kesir Duvarı",
+    layout="centered"
+)
 
-# --- MANTIK KATMANI (Logic) ---
-class FractionModel:
-    def __init__(self, numerator, denominator):
-        if denominator == 0:
-            raise ValueError("Payda 0 olamaz.")
-        self.numerator = int(numerator)
-        self.denominator = int(denominator)
+# --- SESSION STATE (DURUM YÖNETİMİ) ---
+# Kullanıcının eklediği parça sayısını hafızada tutuyoruz.
+if 'count' not in st.session_state:
+    st.session_state.count = 0
+if 'denominator' not in st.session_state:
+    st.session_state.denominator = 3  # Varsayılan 1/3
 
-    @property
-    def value(self):
-        return self.numerator / self.denominator
+# --- FONKSİYONLAR ---
 
-    @property
-    def mixed_parts(self):
-        # Tam sayılı kesre çevirir: (Tam, Kalan Pay)
-        return self.numerator // self.denominator, self.numerator % self.denominator
+def reset_game():
+    """Oyunu sıfırlar."""
+    st.session_state.count = 0
 
-# --- GÖRSELLEŞTİRME KATMANI (Visualization) ---
-def draw_fraction_visuals(model):
-    # Grafik alanını oluştur
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6), gridspec_kw={'height_ratios': [2, 1]})
+def add_piece():
+    """Bir parça ekler."""
+    st.session_state.count += 1
+
+def remove_piece():
+    """Bir parça çıkarır."""
+    if st.session_state.count > 0:
+        st.session_state.count -= 1
+
+def draw_interactive_wall(numerator, denominator):
+    """
+    Matplotlib ile dinamik çizim yapar.
+    Üstte: Doldurulacak '1 Tam' kutusu (Outline).
+    İçinde: Eklenen parçalar.
+    """
+    fig, ax = plt.subplots(figsize=(10, 4))
     
-    # --- 1. KUTU MODELİ (Üst Kısım) ---
-    ax1.set_xlim(-0.5, max(model.value, 1) + 1.5)
-    ax1.set_ylim(0, 3.5)
-    ax1.axis('off')
-    ax1.set_title("Kesir Modelleri", fontsize=14)
+    # Koordinat sistemi ayarları
+    ax.set_xlim(0, 1.2)
+    ax.set_ylim(0, 1.5)
+    ax.axis('off') # Eksenleri gizle
 
-    # Renkler
-    color_block = '#9b59b6' # Mor (Bileşik)
-    color_whole = '#e056fd' # Pembe (Tam)
+    # --- 1. HEDEF KUTUSU (1 TAM) ---
+    # Bu kutu şeffaf ve kenarlıklı olacak, dolmayı bekleyen kap gibi.
+    rect_whole = patches.Rectangle(
+        (0.1, 0.5), 1.0, 0.6, 
+        linewidth=3, edgecolor='#2c3e50', facecolor='none', linestyle='--'
+    )
+    ax.add_patch(rect_whole)
+    ax.text(0.6, 1.2, "1 TAM (Bütün)", ha='center', fontsize=14, fontweight='bold', color='#2c3e50')
 
-    # A) Bileşik Kesir Gösterimi (Yan yana kutular) - Üst Sıra
-    ax1.text(-0.5, 2.5, "Bileşik:", fontsize=12, fontweight='bold')
-    for i in range(model.numerator):
-        rect = patches.Rectangle(
-            (i * (1/model.denominator), 2.1), 
-            1/model.denominator, 0.8, 
-            linewidth=1, edgecolor='white', facecolor=color_block
-        )
-        ax1.add_patch(rect)
-        ax1.text((i + 0.5) * (1/model.denominator), 2.5, f"1/{model.denominator}", 
-                 ha='center', va='center', color='white', fontsize=9)
-
-    # B) Tam Sayılı Kesir Gösterimi (Tam Bloklar + Kalan) - Alt Sıra
-    ax1.text(-0.5, 0.9, "Tam Sayılı:", fontsize=12, fontweight='bold')
-    whole, remainder = model.mixed_parts
-    current_x = 0
+    # --- 2. PARÇALARI ÇİZME (ANIMASYON HİSSİ) ---
+    # Kullanıcının eklediği sayı kadar parça çizeriz.
+    colors = {2: '#e056fd', 3: '#9b59b6', 4: '#3498db', 5: '#1abc9c', 6: '#2ecc71'}
+    piece_color = colors.get(denominator, '#95a5a6')
     
-    # Tam kısımlar
-    for w in range(whole):
-        rect = patches.Rectangle((current_x, 0.5), 1, 0.8, linewidth=1, edgecolor='white', facecolor=color_whole)
-        ax1.add_patch(rect)
-        ax1.text(current_x + 0.5, 0.9, "1 TAM", ha='center', va='center', color='white', fontsize=10)
-        current_x += 1
+    width = 1.0 / denominator
+    
+    for i in range(numerator):
+        # Eğer parça sayısı paydayı geçerse (Bileşik kesir), kutudan taşar.
+        # Görsel olarak 1 tam kutusunun (x=0.1) içine yerleştiriyoruz.
+        x_pos = 0.1 + (i * width)
         
-    # Kalan kısımlar
-    for r in range(remainder):
-        rect = patches.Rectangle(
-            (current_x + r * (1/model.denominator), 0.5), 
-            1/model.denominator, 0.8, 
-            linewidth=1, edgecolor='white', facecolor=color_block
+        rect_part = patches.Rectangle(
+            (x_pos, 0.5), width, 0.6,
+            linewidth=1, edgecolor='white', facecolor=piece_color
         )
-        ax1.add_patch(rect)
-        ax1.text(current_x + (r + 0.5) * (1/model.denominator), 0.9, f"1/{model.denominator}", 
-                 ha='center', va='center', color='white', fontsize=9)
-
-    # --- 2. SAYI DOĞRUSU (Alt Kısım) ---
-    limit = math.ceil(max(model.value, 2)) + 1
-    ax2.set_xlim(-0.5, limit)
-    ax2.set_ylim(-1, 1)
-    ax2.axis('off')
-    
-    # Ana çizgi
-    ax2.axhline(y=0, color='#2980b9', linewidth=2)
-    
-    # İşaretler
-    for i in range(limit + 1):
-        ax2.plot(i, 0, 'o', color='#2980b9') # Tam sayılar
-        ax2.text(i, -0.4, str(i), ha='center', fontsize=12)
+        ax.add_patch(rect_part)
         
-        # Ara parçalar
-        if i < limit:
-            for j in range(1, model.denominator):
-                ax2.plot(i + j/model.denominator, 0, '|', color='gray', markersize=5)
+        # Parçanın içine yazıyı ortala
+        ax.text(x_pos + width/2, 0.8, f"1/{denominator}", 
+                ha='center', va='center', color='white', fontsize=12, fontweight='bold')
 
-    # Konum İşaretleme
-    ax2.plot(model.value, 0, 'o', color='#e74c3c', markersize=12) # Kırmızı nokta
-    ax2.annotate(f"{model.numerator}/{model.denominator}", 
-                 xy=(model.value, 0.1), xytext=(model.value, 0.7),
-                 arrowprops=dict(facecolor='black', shrink=0.05),
-                 ha='center', fontsize=12, fontweight='bold',
-                 bbox=dict(boxstyle="round,pad=0.3", fc="#e056fd", alpha=0.3))
-
-    plt.tight_layout()
     return fig
 
 # --- ARAYÜZ (UI) ---
 def main():
-    st.title("🧩 Matematik Atölyesi: Kesirler")
+    st.title("🧩 Kesirleri Birleştirme Oyunu")
+    st.markdown("Aşağıdaki butonları kullanarak **Birim Kesirleri (1/n)** yukarıdaki **1 TAM** kutusuna taşıyın.")
+
+    # 1. Ayarlar (Sidebar yerine yukarı alalım, daha kolay görünsün)
+    col_set1, col_set2 = st.columns([1, 3])
+    with col_set1:
+        new_denom = st.selectbox(
+            "Kesir Takımı Seç:", 
+            options=[2, 3, 4, 5, 6], 
+            index=1, # Varsayılan 3 (1/3)
+            format_func=lambda x: f"1/{x}'lik Parçalar"
+        )
+        
+        # Eğer payda değişirse sayacı sıfırla
+        if new_denom != st.session_state.denominator:
+            st.session_state.denominator = new_denom
+            st.session_state.count = 0
+            st.rerun()
+
+    # 2. Görsel Alanı
+    fig = draw_interactive_wall(st.session_state.count, st.session_state.denominator)
+    st.pyplot(fig)
+
+    # 3. Kontrol Butonları (Oyunun Kalbi)
+    col1, col2, col3 = st.columns([1, 1, 1])
     
-    with st.sidebar:
-        st.header("Ayarlar")
-        pay = st.number_input("Pay", min_value=1, value=4, step=1)
-        payda = st.number_input("Payda", min_value=1, value=3, step=1)
+    with col1:
+        if st.button(f"➕ 1/{st.session_state.denominator} Ekle", type="primary"):
+            add_piece()
+            st.rerun()
 
-    try:
-        model = FractionModel(pay, payda)
-        
-        # Grafik Çizimi
-        fig = draw_fraction_visuals(model)
-        st.pyplot(fig)
-        
-        # Alt Bilgi ve Soru
-        st.markdown("---")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.info(f"**Gösterilen Kesir:** {pay}/{payda}")
+    with col2:
+        if st.button("➖ Çıkar"):
+            remove_piece()
+            st.rerun()
             
-        with col2:
-            tam, kalan = model.mixed_parts
-            st.success(f"**Tam Sayılı Hali:** {tam} Tam {kalan}/{payda}")
+    with col3:
+        if st.button("🔄 Sıfırla"):
+            reset_game()
+            st.rerun()
 
-    except Exception as e:
-        st.error(f"Bir hata oluştu: {e}")
+    # 4. Geri Bildirim Mesajları
+    current_val = st.session_state.count
+    denom = st.session_state.denominator
+    
+    st.markdown("---")
+    if current_val == 0:
+        st.info("👆 Başlamak için **Ekle** butonuna basın.")
+    elif current_val < denom:
+        st.warning(f"Şu an elimizde **{current_val} tane 1/{denom}** var. 1 Tam olması için **{denom - current_val}** tane daha lazım.")
+    elif current_val == denom:
+        st.balloons()
+        st.success(f"🎉 TEBRİKLER! **{denom} tane 1/{denom}** birleşerek **1 TAM** oluşturdu!")
+    else:
+        st.error(f"Dikkat! 1 Tam'ı geçtin. Şu an elinde **{current_val}/{denom}** (Bileşik Kesir) var.")
 
 if __name__ == "__main__":
     main()
